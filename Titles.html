@@ -1,0 +1,323 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Projects | AkbarTechDynamics</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <!-- Bootstrap -->
+  <link href="assets/vendor/bootstrap/css/bootstrap.min.css" rel="stylesheet">
+  <link href="assets/vendor/bootstrap-icons/bootstrap-icons.css" rel="stylesheet">
+
+  <!-- Main CSS -->
+  <link href="assets/css/main.css" rel="stylesheet">
+</head>
+
+<body class="index-page">
+
+<!-- ===== HEADER ===== -->
+<header id="header" class="header d-flex align-items-center fixed-top">
+  <div class="container-fluid container-xl position-relative d-flex align-items-center">
+
+    <a href="index.html" class="logo d-flex align-items-center me-auto">
+      <img src="assets/img/oMkMZZ01.svg" alt="AkbarTechDynamics logo">
+      <h1 class="sitename">AkbarTechDynamics</h1>
+    </a>
+
+    <nav id="navmenu" class="navmenu">
+      <ul>
+        <li><a href="index.html">Home</a></li>
+        <li><a href="index.html#about">About Us</a></li>
+        <li><a href="index.html#services">Services</a></li>
+        <li><a href="index.html#contact">Contact</a></li>
+        <li><a href="blogs.html">Blog</a></li>
+        <li><a href="careers.html">Careers</a></li>
+        <li><a href="Titles.html" class="active">Projects</a></li>
+        <li><a href="portfolio.html">Portfolio</a></li>
+      </ul>
+      <i class="mobile-nav-toggle d-xl-none bi bi-list"></i>
+    </nav>
+
+  </div>
+</header>
+
+<!-- ===== MAIN ===== -->
+<main class="main" style="margin-top:90px">
+
+<section class="section">
+  <div class="container">
+    <div class="section-title">
+        <h2>Available Project Titles</h2>
+        <p>
+          Below are project titles developed during
+          across multiple domains. Students can filter by year and domain to identify
+          suitable project topics for final-year projects, internships, or research work.
+        </p>
+      </div>
+
+    <!-- Filters -->
+    <div class="row mb-4">
+      <div class="col-md-4">
+        <label class="form-label">Year</label>
+        <select id="yearSelect" class="form-select"></select>
+      </div>
+
+      <div class="col-md-4">
+        <label class="form-label">Domain</label>
+        <select id="domainSelect" class="form-select">
+          <option value="ALL">All Domains</option>
+        </select>
+      </div>
+    </div>
+
+    <!-- Table -->
+    <div class="table-responsive">
+      <table class="table table-bordered table-striped">
+        <thead>
+          <tr>
+            <th>Title</th>
+            <th>Domain</th>
+          </tr>
+        </thead>
+        <tbody id="tableBody"></tbody>
+      </table>
+    </div>
+
+    <div id="statusMessage" class="text-muted mt-3"></div>
+
+    <nav>
+        <ul class="pagination justify-content-center mt-4" id="pagination"></ul>
+      </nav>
+      
+
+  </div>
+</section>
+
+</main>
+
+<!-- ===== FOOTER ===== -->
+<footer class="footer">
+  <div class="container text-center">
+    <p><strong>Akbar Tech Dynamics</strong></p>
+  </div>
+</footer>
+
+<a href="#" class="scroll-top d-flex align-items-center justify-content-center">
+  <i class="bi bi-arrow-up-short"></i>
+</a>
+
+<script src="assets/vendor/bootstrap/js/bootstrap.bundle.min.js"></script>
+<script src="assets/js/main.js"></script>
+
+<script>
+/* =========================================================
+   CONFIGURATION (ONLY EDIT THIS SECTION)
+========================================================= */
+
+// Published Google Sheet ID (from /d/e/ URL)
+const PUBLISHED_ID =
+  "2PACX-1vScXkOWwb37VEDxoljwrh4OhjEUrVnpQ_0fNbYpsFcZH1Aq22v40BgxTd1c-C91g5W2lm0YeTlTlEEW";
+
+// Year → gid mapping
+const YEARS = {
+  "2024": "382079186",
+  "2025": "0",
+};
+
+// Allowed domains (must exactly match sheet values)
+const DOMAINS = [
+  "Block Chain",
+  "Computer Vision",
+  "Deep Learning",
+  "Machine Learning",
+  "Natural Language Processing",
+  "Software Engineer"
+];
+
+/* =========================================================
+   APPLICATION LOGIC (ROBUST & DEFENSIVE)
+========================================================= */
+
+const yearSelect = document.getElementById("yearSelect");
+const domainSelect = document.getElementById("domainSelect");
+const tableBody = document.getElementById("tableBody");
+const statusMessage = document.getElementById("statusMessage");
+
+const RECORDS_PER_PAGE = 50;
+let currentPage = 1;
+let filteredRows = [];
+
+let allRows = [];
+
+/* Initialize dropdowns */
+function initFilters() {
+  Object.keys(YEARS).forEach(year => {
+    const opt = document.createElement("option");
+    opt.value = year;
+    opt.textContent = year;
+    yearSelect.appendChild(opt);
+  });
+
+  DOMAINS.forEach(domain => {
+    const opt = document.createElement("option");
+    opt.value = domain;
+    opt.textContent = domain;
+    domainSelect.appendChild(opt);
+  });
+}
+
+/* Fetch CSV safely */
+async function fetchSheetData(gid) {
+  const url =
+    `https://docs.google.com/spreadsheets/d/e/${PUBLISHED_ID}/pub?output=csv&gid=${gid}&t=${Date.now()}`;
+
+  try {
+    statusMessage.textContent = "Loading data...";
+    const response = await fetch(url);
+    if (!response.ok) throw new Error("Network error");
+
+    const csvText = await response.text();
+    return parseCSV(csvText);
+
+  } catch (err) {
+    console.error(err);
+    statusMessage.textContent = "Failed to load data.";
+    return [];
+  }
+}
+
+/* Simple CSV parser (safe for your sheet structure) */
+function parseCSV(csv) {
+  const lines = csv.trim().split("\n");
+  const headers = lines.shift().split(",").map(h => h.trim().toLowerCase());
+
+  const titleIndex = headers.indexOf("title");
+  const domainIndex = headers.indexOf("domain");
+
+  if (titleIndex === -1 || domainIndex === -1) {
+    statusMessage.textContent = "Invalid sheet format.";
+    return [];
+  }
+
+  return lines.map(line => {
+    const cols = line.split(",");
+    return {
+      title: (cols[titleIndex] || "").trim(),
+      domain: (cols[domainIndex] || "").trim()
+    };
+  }).filter(r => r.title && r.domain);
+}
+
+/* Render table */
+function renderTable(rows) {
+    tableBody.innerHTML = "";
+  
+    if (rows.length === 0) {
+      statusMessage.textContent = "No records found.";
+      document.getElementById("pagination").innerHTML = "";
+      return;
+    }
+  
+    const start = (currentPage - 1) * RECORDS_PER_PAGE;
+    const end = start + RECORDS_PER_PAGE;
+    const pageRows = rows.slice(start, end);
+  
+    pageRows.forEach(r => {
+      const tr = document.createElement("tr");
+      tr.innerHTML = `<td>${r.title}</td><td>${r.domain}</td>`;
+      tableBody.appendChild(tr);
+    });
+  
+    statusMessage.textContent =
+      `Showing ${start + 1}-${Math.min(end, rows.length)} of ${rows.length} records`;
+  
+    renderPagination(rows.length);
+  }
+
+  function renderPagination(totalRecords) {
+    const totalPages = Math.ceil(totalRecords / RECORDS_PER_PAGE);
+    const pagination = document.getElementById("pagination");
+    pagination.innerHTML = "";
+  
+    if (totalPages <= 1) return;
+  
+    // Previous
+    const prevLi = document.createElement("li");
+    prevLi.className = `page-item ${currentPage === 1 ? "disabled" : ""}`;
+    prevLi.innerHTML = `<a class="page-link" href="#">Previous</a>`;
+    prevLi.onclick = () => {
+      if (currentPage > 1) {
+        currentPage--;
+        renderTable(filteredRows);
+      }
+    };
+    pagination.appendChild(prevLi);
+  
+    // Page numbers
+    for (let i = 1; i <= totalPages; i++) {
+      const li = document.createElement("li");
+      li.className = `page-item ${i === currentPage ? "active" : ""}`;
+      li.innerHTML = `<a class="page-link" href="#">${i}</a>`;
+      li.onclick = () => {
+        currentPage = i;
+        renderTable(filteredRows);
+      };
+      pagination.appendChild(li);
+    }
+  
+    // Next
+    const nextLi = document.createElement("li");
+    nextLi.className = `page-item ${currentPage === totalPages ? "disabled" : ""}`;
+    nextLi.innerHTML = `<a class="page-link" href="#">Next</a>`;
+    nextLi.onclick = () => {
+      if (currentPage < totalPages) {
+        currentPage++;
+        renderTable(filteredRows);
+      }
+    };
+    pagination.appendChild(nextLi);
+  }
+  
+
+/* Apply domain filter */
+function applyFilters() {
+    const selectedDomain = domainSelect.value;
+  
+    filteredRows = selectedDomain === "ALL"
+      ? allRows
+      : allRows.filter(r => r.domain === selectedDomain);
+  
+    currentPage = 1; // reset page on filter change
+    renderTable(filteredRows);
+  }
+  
+
+/* Load selected year */
+async function loadYear(year) {
+    const gid = YEARS[year];
+    if (!gid) return;
+  
+    allRows = await fetchSheetData(gid);
+    currentPage = 1;
+    applyFilters();
+  }
+
+/* Init */
+initFilters();
+yearSelect.addEventListener("change", e => loadYear(e.target.value));
+domainSelect.addEventListener("change", applyFilters);
+
+/* Load default year */
+const availableYears = Object.keys(YEARS)
+  .map(y => parseInt(y, 10))
+  .sort((a, b) => b - a);
+
+const latestYear = availableYears[0].toString();
+
+yearSelect.value = latestYear;
+loadYear(latestYear);
+
+</script>
+
+</body>
+</html>
